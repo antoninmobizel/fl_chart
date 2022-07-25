@@ -623,9 +623,9 @@ class BetweenBarsData with EquatableMixin {
   /// The index of the lineBarsData until where the area has to be rendered
   final int toIndex;
 
-  /// If provided, this [BetweenBarsData] draws with this [color]
+  /// If provided, this [BetweenBarsData] draws with this [color].
   /// Otherwise we use  [gradient] to draw the background.
-  /// It throws an exception if you provide both [color] and [gradient]
+  /// It throws an exception if you provide both [color] and [gradient].
   final Color? color;
 
   /// If provided, this [BetweenBarsData] draws with this [gradient].
@@ -633,27 +633,44 @@ class BetweenBarsData with EquatableMixin {
   /// It throws an exception if you provide both [color] and [gradient]
   final Gradient? gradient;
 
+  /// If provided, this [BetweenBarsData] draws the areas above the first line with this [aboveColor].
+  /// Otherwise we use [aboveGradient] to draw the background.
+  /// If [aboveGradient] is not provided either, we fallback on [color] or [gradient].
+  /// It throws an exception if you provide both [aboveColor] and [aboveGradient].
+  final Color? aboveColor;
+
+  /// If provided, this [BetweenBarsData] draws the areas above the first line with this [aboveGradient].
+  /// Otherwise we use [aboveColor] to draw the background.
+  /// If [aboveColor] is not provided either, we fallback on [color] or [gradient].
+  /// It throws an exception if you provide both [aboveColor] and [aboveGradient].
+  final Gradient? aboveGradient;
+
   BetweenBarsData({
     required int fromIndex,
     required int toIndex,
     Color? color,
     Gradient? gradient,
+    Color? aboveColor,
+    Gradient? aboveGradient,
   })  : fromIndex = fromIndex,
         toIndex = toIndex,
         color = color ??
             ((color == null && gradient == null)
                 ? Colors.blueGrey.withOpacity(0.5)
                 : null),
-        gradient = gradient;
+        gradient = gradient,
+        aboveColor = aboveColor,
+        aboveGradient = aboveGradient;
 
   /// Lerps a [BetweenBarsData] based on [t] value, check [Tween.lerp].
   static BetweenBarsData lerp(BetweenBarsData a, BetweenBarsData b, double t) {
     return BetweenBarsData(
-      fromIndex: b.fromIndex,
-      toIndex: b.toIndex,
-      color: Color.lerp(a.color, b.color, t),
-      gradient: Gradient.lerp(a.gradient, b.gradient, t),
-    );
+        fromIndex: b.fromIndex,
+        toIndex: b.toIndex,
+        color: Color.lerp(a.color, b.color, t),
+        gradient: Gradient.lerp(a.gradient, b.gradient, t),
+        aboveColor: Color.lerp(a.aboveColor, b.aboveColor, t),
+        aboveGradient: Gradient.lerp(a.aboveGradient, b.aboveGradient, t));
   }
 
   /// Used for equality check, see [EquatableMixin].
@@ -663,6 +680,8 @@ class BetweenBarsData with EquatableMixin {
         toIndex,
         color,
         gradient,
+        aboveColor,
+        aboveGradient
       ];
 }
 

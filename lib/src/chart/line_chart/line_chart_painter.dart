@@ -85,10 +85,6 @@ class LineChartPainter extends AxisChartPainter<LineChartData> {
 
     super.paint(context, canvasWrapper, holder);
 
-    for (var betweenBarsData in data.betweenBarsData) {
-      drawBetweenBarsArea(canvasWrapper, data, betweenBarsData, holder);
-    }
-
     if (!data.extraLinesData.extraLinesOnTop) {
       drawExtraLines(context, canvasWrapper, holder);
     }
@@ -130,6 +126,10 @@ class LineChartPainter extends AxisChartPainter<LineChartData> {
           LineIndexDrawingInfo(barData, i, spot, index, indicatorData),
         );
       }
+    }
+
+    for (var betweenBarsData in data.betweenBarsData) {
+      drawBetweenBarsArea(canvasWrapper, data, betweenBarsData, holder);
     }
 
     drawTouchedSpotsIndicator(canvasWrapper, lineIndexDrawingInfo, holder);
@@ -249,22 +249,6 @@ class LineChartPainter extends AxisChartPainter<LineChartData> {
     }
 
     for (int i = 0; i < fromBarSplitLines.length; i++) {
-      final fromSpots = fromBarSplitLines[i];
-      final toSpots = toBarSplitLines[i].reversed.toList();
-
-      final fromBarPath = generateBarPath(
-        viewSize,
-        fromBarData,
-        fromSpots,
-        holder,
-      );
-      final barPath = generateBarPath(
-        viewSize,
-        toBarData.copyWith(spots: toSpots),
-        toSpots,
-        holder,
-        appendToPath: fromBarPath,
-      );
       final left = min(fromBarData.mostLeftSpot.x, toBarData.mostLeftSpot.x);
       final top = max(fromBarData.mostTopSpot.y, toBarData.mostTopSpot.y);
       final right = max(fromBarData.mostRightSpot.x, toBarData.mostRightSpot.x);
@@ -272,20 +256,69 @@ class LineChartPainter extends AxisChartPainter<LineChartData> {
         fromBarData.mostBottomSpot.y,
         toBarData.mostBottomSpot.y,
       );
-      final aroundRect = Rect.fromLTRB(
-        getPixelX(left, viewSize, holder),
-        getPixelY(top, viewSize, holder),
-        getPixelX(right, viewSize, holder),
-        getPixelY(bottom, viewSize, holder),
-      );
 
-      drawBetweenBar(
-        canvasWrapper,
-        barPath,
-        betweenBarsData,
-        aroundRect,
+      var fromSpots = [FlSpot(left, 0)] + fromBarSplitLines[i] + [FlSpot(right, 0), FlSpot(left, 0)];
+      final fromBarPath = generateBarPath(
+        viewSize,
+        fromBarData,
+        fromSpots,
         holder,
       );
+
+      if (null == betweenBarsData.aboveColor &&
+          null == betweenBarsData.aboveGradient) {
+        final toSpots = toBarSplitLines[i].reversed.toList();
+
+        final barPath = generateBarPath(
+          viewSize,
+          toBarData.copyWith(spots: toSpots),
+          toSpots,
+          holder,
+          appendToPath: fromBarPath,
+        );
+
+        final aroundRect = Rect.fromLTRB(
+          getPixelX(left, viewSize, holder),
+          getPixelY(top, viewSize, holder),
+          getPixelX(right, viewSize, holder),
+          getPixelY(bottom, viewSize, holder),
+        );
+
+        drawBetweenBar(
+          canvasWrapper,
+          barPath,
+          betweenBarsData,
+          aroundRect,
+          holder,
+        );
+      } else {
+        final underSpots = [FlSpot(left, 0)] + toBarSplitLines[i] + [FlSpot(right, 0), FlSpot(left, 0)];
+
+        final underPath = generateBarPath(
+          viewSize,
+          toBarData,
+          underSpots,
+          holder,
+        );
+
+        try {
+          final intersect = Path.combine(
+              PathOperation.reverseDifference, fromBarPath, underPath);
+          final aroundRect = Rect.fromLTRB(
+            getPixelX(left, viewSize, holder),
+            getPixelY(top, viewSize, holder),
+            getPixelX(right, viewSize, holder),
+            getPixelY(0, viewSize, holder),
+          );
+
+          drawBetweenBar(canvasWrapper, intersect, betweenBarsData, aroundRect,
+              holder, true);
+        } catch (e) {
+          print(e);
+          print(
+              'Path operations fail with Flutter web rendered by html. Use canvaskit as web-renderer.');
+        }
+      }
     }
   }
 
@@ -769,17 +802,23 @@ class LineChartPainter extends AxisChartPainter<LineChartData> {
 
   @visibleForTesting
   void drawBetweenBar(
-    CanvasWrapper canvasWrapper,
-    Path barPath,
-    BetweenBarsData betweenBarsData,
-    Rect aroundRect,
-    PaintHolder<LineChartData> holder,
-  ) {
+      CanvasWrapper canvasWrapper,
+      Path barPath,
+      BetweenBarsData betweenBarsData,
+      Rect aroundRect,
+      PaintHolder<LineChartData> holder,
+      [bool userAboveColor = false]) {
     final viewSize = canvasWrapper.size;
 
+    var color =
+        userAboveColor ? betweenBarsData.aboveColor : betweenBarsData.color;
+    var gradient = userAboveColor
+        ? betweenBarsData.aboveGradient
+        : betweenBarsData.gradient;
+
     _barAreaPaint.setColorOrGradient(
-      betweenBarsData.color,
-      betweenBarsData.gradient,
+      color,
+      gradient,
       aroundRect,
     );
 
