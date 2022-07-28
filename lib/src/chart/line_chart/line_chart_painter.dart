@@ -91,20 +91,17 @@ class LineChartPainter extends AxisChartPainter<LineChartData> {
 
     List<LineIndexDrawingInfo> lineIndexDrawingInfo = [];
 
-    /// draw each line independently on the chart
+    /// draw each line with an above or below area independently on the chart
     for (var i = 0; i < data.lineBarsData.length; i++) {
       final barData = data.lineBarsData[i];
 
-      if (!barData.show) {
+      if (!barData.show ||
+          !(barData.belowBarData.show || barData.aboveBarData.show)) {
         continue;
       }
 
       drawBarLine(canvasWrapper, barData, holder);
       drawDots(canvasWrapper, barData, holder);
-
-      if (data.extraLinesData.extraLinesOnTop) {
-        drawExtraLines(context, canvasWrapper, holder);
-      }
 
       final indicatorsData = data.lineTouchData
           .getTouchedSpotIndicator(barData, barData.showingIndicators);
@@ -130,6 +127,47 @@ class LineChartPainter extends AxisChartPainter<LineChartData> {
 
     for (var betweenBarsData in data.betweenBarsData) {
       drawBetweenBarsArea(canvasWrapper, data, betweenBarsData, holder);
+    }
+
+    /// draw each simple line independently on the chart
+    for (var i = 0; i < data.lineBarsData.length; i++) {
+      final barData = data.lineBarsData[i];
+
+      if (!barData.show) {
+        continue;
+      }
+
+      if (barData.belowBarData.show || barData.aboveBarData.show) {
+        continue;
+      }
+
+      drawBarLine(canvasWrapper, barData, holder);
+      drawDots(canvasWrapper, barData, holder);
+
+      final indicatorsData = data.lineTouchData
+          .getTouchedSpotIndicator(barData, barData.showingIndicators);
+
+      if (indicatorsData.length != barData.showingIndicators.length) {
+        throw Exception(
+            'indicatorsData and touchedSpotOffsets size should be same');
+      }
+
+      for (var j = 0; j < barData.showingIndicators.length; j++) {
+        final indicatorData = indicatorsData[j];
+        final index = barData.showingIndicators[j];
+        final spot = barData.spots[index];
+
+        if (indicatorData == null) {
+          continue;
+        }
+        lineIndexDrawingInfo.add(
+          LineIndexDrawingInfo(barData, i, spot, index, indicatorData),
+        );
+      }
+    }
+
+    if (data.extraLinesData.extraLinesOnTop) {
+      drawExtraLines(context, canvasWrapper, holder);
     }
 
     drawTouchedSpotsIndicator(canvasWrapper, lineIndexDrawingInfo, holder);
@@ -257,7 +295,9 @@ class LineChartPainter extends AxisChartPainter<LineChartData> {
         toBarData.mostBottomSpot.y,
       );
 
-      var fromSpots = [FlSpot(left, 0)] + fromBarSplitLines[i] + [FlSpot(right, 0), FlSpot(left, 0)];
+      var fromSpots = [FlSpot(left, 0)] +
+          fromBarSplitLines[i] +
+          [FlSpot(right, 0), FlSpot(left, 0)];
       final fromBarPath = generateBarPath(
         viewSize,
         fromBarData,
@@ -292,7 +332,9 @@ class LineChartPainter extends AxisChartPainter<LineChartData> {
           holder,
         );
       } else {
-        final underSpots = [FlSpot(left, 0)] + toBarSplitLines[i] + [FlSpot(right, 0), FlSpot(left, 0)];
+        final underSpots = [FlSpot(left, 0)] +
+            toBarSplitLines[i] +
+            [FlSpot(right, 0), FlSpot(left, 0)];
 
         final underPath = generateBarPath(
           viewSize,
